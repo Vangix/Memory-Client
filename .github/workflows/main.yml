@@ -20,18 +20,31 @@ jobs:
         run: |
           CP=$(find ~/.gradle -name "*.jar" -size +1M | tr '\n' ':')
           {
-            echo "=== Minecraft classes"
+            echo "=== Big jars"
+            find ~/.gradle -name "*.jar" -size +1M | head -30
+
+            echo "=== Minecraft classes (gui/renderer top level)"
             for j in $(find ~/.gradle -name "*.jar" -size +1M); do
-              unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "^net/minecraft/client/(gui|renderer)/[A-Za-z]*(Graphics|Extract|BufferSource|RenderType|Submit|Collector|Gizmo|Line)[A-Za-z]*\.class$"
-            done | sort -u
+              jar tf "$j" 2>/dev/null | grep -E "^net/minecraft/client/(gui|renderer)/[^/$]*\.class$" | grep -E "Graphics|Extract|Buffer|RenderType|Collector|Gizmo|Line|RenderState|Pipeline"
+            done | sort -u | head -150
+
+            echo "=== Fabric API nested modules"
+            rm -rf /tmp/fa && mkdir -p /tmp/fa
+            for j in $(find ~/.gradle -name "fabric-api-*.jar" ! -name "*sources*" ! -name "*javadoc*"); do
+              (cd /tmp/fa && jar xf "$j" META-INF/jars)
+            done
+            ls /tmp/fa/META-INF/jars 2>/dev/null | head -80
             echo "=== Fabric API classes"
-            for j in $(find ~/.gradle -name "fabric-*.jar" -size +5k); do
-              unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "api/client/(rendering|keymapping|keybinding|event)/.*\.class$"
-            done | sort -u | head -80
-            echo "=== javap"
-            javap -cp "$CP" 'com.mojang.blaze3d.platform.InputConstants$Type' 2>&1 | head -20
-            javap -cp "$CP" net.minecraft.client.KeyMapping 2>&1 | grep -E "KeyMapping\(|Category" | head
-            javap -cp "$CP" net.minecraft.client.Minecraft 2>&1 | grep -iE "screen" | head
+            for n in /tmp/fa/META-INF/jars/*.jar; do
+              jar tf "$n" 2>/dev/null | grep -E "api/client/(rendering|keymapping|keybinding|event/lifecycle)/[^/]*\.class$" | grep -v '\$'
+            done | sort -u | head -120
+
+            echo "=== KeyMapping Category"
+            javap -cp "$CP" 'net.minecraft.client.KeyMapping$Category' 2>&1 | head -30
+            echo "=== Screen"
+            javap -cp "$CP" net.minecraft.client.gui.screens.Screen 2>&1 | grep -E "render|extract|mouse|key|Screen\(|isPauseScreen|font" | head -40
+            echo "=== Font"
+            javap -cp "$CP" net.minecraft.client.gui.Font 2>&1 | grep -E "width|draw|String" | head -20
           } > api-dump.txt 2>&1
           cat api-dump.txt
       - uses: actions/upload-artifact@v4
