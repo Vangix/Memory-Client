@@ -13,7 +13,15 @@ jobs:
         with:
           gradle-version: 9.8.0
       - run: gradle build
+      - name: List real API class names
+        if: always()
+        run: |
+          find ~/.gradle . -name "*.jar" -size +20k 2>/dev/null | while read j; do
+            out=$(unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "(GuiGraphics|GuiGraphicsExtractor|MultiBufferSource|RenderType|LevelRenderEvents|WorldRenderEvents|KeyMappingHelper|KeyBindingHelper|SubmitNodeCollector|InputConstants|KeyMapping)\.class$" | sort -u)
+            if [ -n "$out" ]; then echo "=== $j"; echo "$out"; fi
+          done
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: mod-jar
           path: build/libs/*.jar
