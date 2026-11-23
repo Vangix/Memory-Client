@@ -32,5 +32,19 @@ public class ClickGuiScreen extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
+    // VERIFY: in newer versions these take event objects instead of primitives.
+    // If the compiler complains, send me the suggested signature.
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        for (CategoryPanel p : panels) p.drag(mx);
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        for (CategoryPanel p : panels) p.release();
+        return super.mouseReleased(mx, my, button);
+    }
+
     @Override public boolean isPauseScreen() { return false; }
 }
