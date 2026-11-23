@@ -1,4 +1,18 @@
-"environment": "client",
-"entrypoints": {
-  "client": ["com.vangix.tools.VangixTools"]
+{
+  "schemaVersion": 1,
+  "id": "vangixtools",
+  "version": "${version}",
+  "name": "Vangix Tools",
+  "description": "Client-side utility mod.",
+  "authors": ["Vangix"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.vangix.tools.VangixTools"]
+  },
+  "depends": {
+    "fabricloader": "*",
+    "minecraft": "*",
+    "fabric-api": "*"
+  }
 }
