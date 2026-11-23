@@ -1,0 +1,4 @@
+"environment": "client",
+"entrypoints": {
+  "client": ["com.vangix.tools.VangixTools"]
+}
