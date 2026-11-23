@@ -2,6 +2,7 @@ package com.vangix.tools.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class RenderUtil {
@@ -27,5 +28,12 @@ public final class RenderUtil {
         };
         int[][] e = {{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
         for (int[] ed : e) line(ps, vc, c[ed[0]], c[ed[1]], argb);
+    }
+
+    /** Wireframe box from a world-space AABB, shifted by the camera position. */
+    public static void box(PoseStack ps, VertexConsumer vc, AABB bb, Vec3 cam, int argb) {
+        box(ps, vc,
+            new Vec3(bb.minX - cam.x, bb.minY - cam.y, bb.minZ - cam.z),
+            new Vec3(bb.maxX - cam.x, bb.maxY - cam.y, bb.maxZ - cam.z), argb);
     }
 }
