@@ -4,7 +4,7 @@ import com.vangix.tools.module.impl.*;
 import java.util.*;
 
 public final class ModuleManager {
-    private final List<Module> modules = new ArrayList<>();
+    private final List<Mod> modules = new ArrayList<>();
     public final BaseFinderModule baseFinder = new BaseFinderModule();
     public final EspModule esp = new EspModule();
     public final TracersModule tracers = new TracersModule();
@@ -15,13 +15,13 @@ public final class ModuleManager {
         modules.add(tracers);
     }
 
-    public List<Module> all() { return modules; }
+    public List<Mod> all() { return modules; }
 
-    public List<Module> in(Category c) {
+    public List<Mod> in(Category c) {
         return modules.stream().filter(m -> m.category == c).toList();
     }
 
     public void tick() {
-        for (Module m : modules) if (m.isEnabled()) m.onTick();
+        for (Mod m : modules) if (m.isEnabled()) m.onTick();
     }
 }
