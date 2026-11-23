@@ -16,22 +16,22 @@ public final class ChunkScanner {
     private static final Predicate<BlockState> INTERESTING = s -> BlockWeights.score(s) > 0;
     private static final long BUDGET_NANOS = 1_000_000L; // ~1 ms per tick
 
-    private final Map<Long, ChunkScore> cache = new ConcurrentHashMap<>();
+    private final Map<ChunkPos, ChunkScore> cache = new ConcurrentHashMap<>();
     private final ArrayDeque<ChunkPos> queue = new ArrayDeque<>();
-    private final Set<Long> queued = new HashSet<>();
+    private final Set<ChunkPos> queued = new HashSet<>();
 
     public void enqueue(ChunkPos pos) {
-        if (queued.add(pos.toLong())) queue.add(pos);
+        if (queued.add(pos)) queue.add(pos);
     }
 
-    public void remove(ChunkPos pos) { cache.remove(pos.toLong()); }
+    public void remove(ChunkPos pos) { cache.remove(pos); }
 
     public void clear() { cache.clear(); queue.clear(); queued.clear(); }
 
-    public Map<Long, ChunkScore> results() { return cache; }
+    public Map<ChunkPos, ChunkScore> results() { return cache; }
 
     public void requeueAll() {
-        for (Long key : cache.keySet()) enqueue(new ChunkPos(key));
+        for (ChunkPos key : new ArrayList<>(cache.keySet())) enqueue(key);
     }
 
     public void tick() {
@@ -41,10 +41,10 @@ public final class ChunkScanner {
         long deadline = System.nanoTime() + BUDGET_NANOS;
         while (System.nanoTime() < deadline && !queue.isEmpty()) {
             ChunkPos pos = queue.poll();
-            queued.remove(pos.toLong());
-            LevelChunk chunk = mc.level.getChunkSource().getChunkNow(pos.x, pos.z);
+            queued.remove(pos);
+            LevelChunk chunk = mc.level.getChunkSource().getChunkNow(pos.x(), pos.z());
             if (chunk == null) continue;
-            cache.put(pos.toLong(), scan(chunk));
+            cache.put(pos, scan(chunk));
         }
     }
 
