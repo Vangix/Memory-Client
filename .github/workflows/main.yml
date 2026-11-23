@@ -13,47 +13,55 @@ jobs:
         with:
           gradle-version: 9.8.0
       - name: Build
-        run: gradle build
-        continue-on-error: true
+        run: gradle build 2>&1 | tee build.log
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## Compile errors'
+            echo '```'
+            grep -E -A2 "error:" build.log | awk '!seen[$0]++' | head -120
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: API dump
         if: always()
         run: |
           CP=$(find ~/.gradle -name "*.jar" -size +1M | tr '\n' ':')
+          MC=$(find ~/.gradle -name "minecraft-merged-deobf-*.jar" | head -1)
+          rm -rf /tmp/fa && mkdir -p /tmp/fa
+          for j in $(find ~/.gradle -name "fabric-api-*.jar" ! -name "*sources*" ! -name "*javadoc*"); do
+            (cd /tmp/fa && jar xf "$j" META-INF/jars)
+          done
           {
-            echo "=== Big jars"
-            find ~/.gradle -name "*.jar" -size +1M | head -30
-
-            echo "=== Minecraft classes (gui/renderer top level)"
-            for j in $(find ~/.gradle -name "*.jar" -size +1M); do
-              jar tf "$j" 2>/dev/null | grep -E "^net/minecraft/client/(gui|renderer)/[^/$]*\.class$" | grep -E "Graphics|Extract|Buffer|RenderType|Collector|Gizmo|Line|RenderState|Pipeline"
-            done | sort -u | head -150
-
-            echo "=== Fabric API nested modules"
-            rm -rf /tmp/fa && mkdir -p /tmp/fa
-            for j in $(find ~/.gradle -name "fabric-api-*.jar" ! -name "*sources*" ! -name "*javadoc*"); do
-              (cd /tmp/fa && jar xf "$j" META-INF/jars)
-            done
-            ls /tmp/fa/META-INF/jars 2>/dev/null | head -80
-            echo "=== Fabric API classes"
-            for n in /tmp/fa/META-INF/jars/*.jar; do
-              jar tf "$n" 2>/dev/null | grep -E "api/client/(rendering|keymapping|keybinding|event/lifecycle)/[^/]*\.class$" | grep -v '\$'
-            done | sort -u | head -120
-
-            echo "=== KeyMapping Category"
-            javap -cp "$CP" 'net.minecraft.client.KeyMapping$Category' 2>&1 | head -30
-            echo "=== Screen"
-            javap -cp "$CP" net.minecraft.client.gui.screens.Screen 2>&1 | grep -E "render|extract|mouse|key|Screen\(|isPauseScreen|font" | head -40
-            echo "=== Font"
-            javap -cp "$CP" net.minecraft.client.gui.Font 2>&1 | grep -E "width|draw|String" | head -20
-          } > api-dump.txt 2>&1
-          cat api-dump.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-dump
-          path: api-dump.txt
+            echo '## API dump'
+            echo '```'
+            echo "=== Minecraft classes"
+          python3 - "$MC" <<'PY' | head -150
+          import sys, zipfile, re
+          pat = re.compile(r'(RenderType|MultiBufferSource|BufferSource|Gizmo|GuiGraphics|LevelRender|LineRender|RenderPipelines|SubmitNode)')
+          for n in sorted(zipfile.ZipFile(sys.argv[1]).namelist()):
+              if n.endswith('.class') and '$' not in n and pat.search(n):
+                  print(n)
+          PY
+            echo "=== Fabric API client classes"
+          python3 - <<'PY' | head -150
+          import glob, zipfile, re
+          keep = re.compile(r'(rendering-v1|key-mapping|lifecycle-events|screen-api|renderer-api)')
+          for f in sorted(glob.glob('/tmp/fa/META-INF/jars/*.jar')):
+              if not keep.search(f): continue
+              for n in sorted(zipfile.ZipFile(f).namelist()):
+                  if n.endswith('.class') and '$' not in n and '/api/client/' in n and '/impl/' not in n:
+                      print(n)
+          PY
+            echo "=== GuiGraphicsExtractor"
+            javap -cp "$CP" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -E "fill|text|Text|String" | head -30
+            echo "=== MouseButtonEvent"
+            javap -cp "$CP" net.minecraft.client.input.MouseButtonEvent 2>&1 | head -20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: mod-jar
           path: build/libs/*.jar
+          if-no-files-found: ignore
