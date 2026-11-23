@@ -3,7 +3,7 @@ package com.vangix.tools.module.impl;
 import com.vangix.tools.module.*;
 import com.vangix.tools.setting.*;
 
-public class EspModule extends Module {
+public class EspModule extends Mod {
     public final BoolSetting blocks = add(new BoolSetting("Blocks", true));
     public final BoolSetting players = add(new BoolSetting("Players", true));
     public final BoolSetting mobs = add(new BoolSetting("Mobs", false));
