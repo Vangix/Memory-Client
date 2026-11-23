@@ -4,7 +4,7 @@ import com.vangix.tools.VangixTools;
 import com.vangix.tools.module.*;
 import com.vangix.tools.setting.*;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.*;
 
@@ -16,33 +16,32 @@ public class CategoryPanel {
 
     private final Category category;
     private final int x, y, w;
-    private final Set<Module> expanded = new HashSet<>();
-    private final Map<Module, Float> anim = new HashMap<>(); // 0 = off, 1 = on
+    private final Set<Mod> expanded = new HashSet<>();
+    private final Map<Mod, Float> anim = new HashMap<>();
     private NumberSetting dragging;
 
     public CategoryPanel(Category c, int x, int y, int w) {
         this.category = c; this.x = x; this.y = y; this.w = w;
     }
 
-    private int heightOf(List<Module> mods) {
+    private int heightOf(List<Mod> mods) {
         int h = HEADER_H;
-        for (Module m : mods) {
+        for (Mod m : mods) {
             h += ROW_H;
             if (expanded.contains(m)) h += m.settings().size() * ROW_H;
         }
         return h + 4;
     }
 
-    public void render(GuiGraphics g, Font font) {
-        List<Module> mods = VangixTools.modules.in(category);
+    public void render(GuiGraphicsExtractor g, Font font) {
+        List<Mod> mods = VangixTools.modules.in(category);
         GuiUtil.card(g, x, y, x + w, y + heightOf(mods), 3, BG, BORDER);
-        g.drawCenteredString(font, category.label, x + w / 2, y + 8, TITLE);
+        GuiUtil.centered(g, font, category.label, x + w / 2, y + 8, TITLE);
 
         int cy = y + HEADER_H;
-        for (Module m : mods) {
-            g.drawString(font, m.name, x + PAD, cy + 5, TEXT, false);
+        for (Mod m : mods) {
+            GuiUtil.text(g, font, m.name, x + PAD, cy + 5, TEXT);
 
-            // Smooth toggle animation
             float a = anim.getOrDefault(m, m.isEnabled() ? 1f : 0f);
             a += ((m.isEnabled() ? 1f : 0f) - a) * 0.25f;
             anim.put(m, a);
@@ -62,29 +61,29 @@ public class CategoryPanel {
         }
     }
 
-    private void renderSetting(GuiGraphics g, Font font, Setting<?> s, int cy) {
+    private void renderSetting(GuiGraphicsExtractor g, Font font, Setting<?> s, int cy) {
         int left = x + PAD + 6;
         if (s instanceof BoolSetting b) {
-            g.drawString(font, s.name, left, cy + 5, SUB, false);
+            GuiUtil.text(g, font, s.name, left, cy + 5, SUB);
             int bx = x + w - 20;
-            g.fill(bx, cy + 4, bx + 10, cy + 14, OFF);
-            if (b.get()) g.fill(bx + 2, cy + 6, bx + 8, cy + 12, ACCENT);
+            GuiUtil.fill(g, bx, cy + 4, bx + 10, cy + 14, OFF);
+            if (b.get()) GuiUtil.fill(g, bx + 2, cy + 6, bx + 8, cy + 12, ACCENT);
         } else if (s instanceof NumberSetting n) {
-            g.drawString(font, s.name, left, cy + 2, SUB, false);
+            GuiUtil.text(g, font, s.name, left, cy + 2, SUB);
             String v = String.valueOf(n.intValue());
-            g.drawString(font, v, x + w - PAD - font.width(v), cy + 2, TEXT, false);
+            GuiUtil.text(g, font, v, x + w - PAD - font.width(v), cy + 2, TEXT);
             int tx1 = left, tx2 = x + w - PAD;
-            g.fill(tx1, cy + 13, tx2, cy + 15, TRACK);
+            GuiUtil.fill(g, tx1, cy + 13, tx2, cy + 15, TRACK);
             double frac = (n.get() - n.min) / (n.max - n.min);
             int fx = tx1 + (int) ((tx2 - tx1) * frac);
-            g.fill(tx1, cy + 13, fx, cy + 15, ACCENT);
-            g.fill(fx - 1, cy + 11, fx + 2, cy + 17, TEXT); // handle
+            GuiUtil.fill(g, tx1, cy + 13, fx, cy + 15, ACCENT);
+            GuiUtil.fill(g, fx - 1, cy + 11, fx + 2, cy + 17, TEXT);
         }
     }
 
     public boolean click(double mx, double my, int button) {
         int cy = y + HEADER_H;
-        for (Module m : VangixTools.modules.in(category)) {
+        for (Mod m : VangixTools.modules.in(category)) {
             if (inRow(mx, my, cy)) {
                 if (button == 0) m.toggle();
                 else if (button == 1 && !expanded.remove(m)) expanded.add(m);
@@ -112,7 +111,6 @@ public class CategoryPanel {
         return mx >= x && mx <= x + w && my >= cy && my < cy + ROW_H;
     }
 
-    /** Called while the mouse is held; maps mouse X to the slider value. */
     public void drag(double mx) {
         if (dragging == null) return;
         int left = x + PAD + 6, right = x + w - PAD;
