@@ -19,18 +19,26 @@ jobs:
         if: always()
         run: |
           CP=$(find ~/.gradle -name "*.jar" -size +1M | tr '\n' ':')
-          echo "=== Minecraft classes"
-          for j in $(find ~/.gradle -name "*.jar" -size +1M); do
-            unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "^net/minecraft/client/(gui|renderer)/[A-Za-z]*(Graphics|Extract|BufferSource|RenderType|Submit|Collector|Gizmo|Line)[A-Za-z]*\.class$"
-          done | sort -u
-          echo "=== Fabric API classes"
-          for j in $(find ~/.gradle -name "fabric-*.jar" -size +5k); do
-            unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "api/client/(rendering|keymapping|keybinding|event)/.*\.class$"
-          done | sort -u | head -80
-          echo "=== javap"
-          javap -cp "$CP" 'com.mojang.blaze3d.platform.InputConstants$Type' 2>&1 | head -20
-          javap -cp "$CP" net.minecraft.client.KeyMapping 2>&1 | grep -E "KeyMapping\(|Category" | head
-          javap -cp "$CP" net.minecraft.client.Minecraft 2>&1 | grep -iE "screen" | head
+          {
+            echo "=== Minecraft classes"
+            for j in $(find ~/.gradle -name "*.jar" -size +1M); do
+              unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "^net/minecraft/client/(gui|renderer)/[A-Za-z]*(Graphics|Extract|BufferSource|RenderType|Submit|Collector|Gizmo|Line)[A-Za-z]*\.class$"
+            done | sort -u
+            echo "=== Fabric API classes"
+            for j in $(find ~/.gradle -name "fabric-*.jar" -size +5k); do
+              unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E "api/client/(rendering|keymapping|keybinding|event)/.*\.class$"
+            done | sort -u | head -80
+            echo "=== javap"
+            javap -cp "$CP" 'com.mojang.blaze3d.platform.InputConstants$Type' 2>&1 | head -20
+            javap -cp "$CP" net.minecraft.client.KeyMapping 2>&1 | grep -E "KeyMapping\(|Category" | head
+            javap -cp "$CP" net.minecraft.client.Minecraft 2>&1 | grep -iE "screen" | head
+          } > api-dump.txt 2>&1
+          cat api-dump.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-dump
+          path: api-dump.txt
       - uses: actions/upload-artifact@v4
         if: success()
         with:
